@@ -4885,7 +4885,7 @@ const char* launcher_model_relay_error_text(const char* err, bool ice_mode) {
     }
     return NULL;
 }
-/* ---- Quick video presets (Low-end / Mid / High) ------------------------ */
+/* ---- Quick video presets (Low-end / Balanced / High) -------------------- */
 static int lm_ci_has(const char* hay, const char* needle) {
     size_t n = strlen(needle);
     if (!hay) return 0;
@@ -4905,35 +4905,36 @@ static int lm_find_renderer(LauncherModel* m, const char* needle) {
     return -1;
 }
 
-/* preset: 0 = Low-end, 1 = Mid, 2 = High. Resolution is deliberately not
- * touched here (it lives in the display settings). Every option is applied
- * only if the host offers it. */
+static int lm_find_resolution(LauncherModel* m, const char* needle) {
+    const int n = launcher_model_internal_resolution_count(m);
+    for (int i = 0; i < n; ++i)
+        if (lm_ci_has(launcher_model_internal_resolution_label_at(m, i), needle)) return i;
+    return -1;
+}
+
+/* preset: 0 = Low-end, 1 = Balanced, 2 = High */
 void launcher_model_apply_video_preset(LauncherModel* m, int preset) {
-    int r = -1;
+    int r = -1, res = -1;
     if (!m) return;
     switch (preset) {
-    case 0:  /* Low-end */
-        if (m->has_antialiasing) m->s.antialiasing = 0;
-        if (m->has_texture_filter) m->s.texture_filter = launcher_model_normalize_texture_filter(m, 0);
-        if (m->has_screen_kind) m->s.screen_kind = 0;
-        if (m->has_frame_interp) m->s.frame_interp = 0;
-        if (m->has_rewind_depth && m->s.rewind_enabled) launcher_model_toggle_rewind_enabled(m);
+    case 0:  /* Low-end: CPU renderer, lowest resolution */
+        r   = lm_find_renderer(m, "Software");
+        res = lm_find_resolution(m, "Native");
+        if (res < 0) res = 0;                 /* entry 0 = host default/lowest */
         break;
     case 2:  /* High */
-        if (m->has_antialiasing) m->s.antialiasing = 4;
-        if (m->has_texture_filter) m->s.texture_filter = launcher_model_normalize_texture_filter(m, 1);
-        if (m->has_screen_kind) m->s.screen_kind = 1;
-        if (m->has_frame_interp) m->s.frame_interp = 1;
+        r   = lm_find_renderer(m, "OpenGL");
+        res = lm_find_resolution(m, "1080");
         break;
-    default:  /* Mid */
-        if (m->has_antialiasing) m->s.antialiasing = 2;
-        if (m->has_texture_filter) m->s.texture_filter = launcher_model_normalize_texture_filter(m, 1);
-        if (m->has_screen_kind) m->s.screen_kind = 0;
-        if (m->has_frame_interp) m->s.frame_interp = 0;
-        if (m->has_rewind_depth && m->s.rewind_enabled) launcher_model_toggle_rewind_enabled(m);
+    default: /* Balanced */
+        r   = lm_find_renderer(m, "OpenGL");
+        res = lm_find_resolution(m, "Auto");
+        if (res < 0) res = lm_find_resolution(m, "720");
+        if (res < 0) res = lm_find_resolution(m, "Native");
         break;
     }
-    r = lm_find_renderer(m, preset == 0 ? "Software" : "OpenGL");
     if (r >= 0 && launcher_model_renderer_offered(m))
         launcher_model_set_renderer(m, r);
+    if (res >= 0 && launcher_model_internal_resolution_offered(m))
+        launcher_model_set_internal_resolution(m, res);
 }
