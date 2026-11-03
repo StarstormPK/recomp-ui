@@ -4885,3 +4885,45 @@ const char* launcher_model_relay_error_text(const char* err, bool ice_mode) {
     }
     return NULL;
 }
+static int lm_find_renderer(LauncherModel* m, const char* needle) {
+    const int n = launcher_model_renderer_count(m);
+    for (int i = 0; i < n; ++i) {
+        const char* l = launcher_model_renderer_label_at(m, i);
+        if (l && strstr(l, needle)) return i;
+    }
+    return -1;
+}
+
+static int lm_find_resolution(LauncherModel* m, const char* needle) {
+    const int n = launcher_model_internal_resolution_count(m);
+    for (int i = 0; i < n; ++i) {
+        const char* l = launcher_model_internal_resolution_label_at(m, i);
+        if (l && strstr(l, needle)) return i;
+    }
+    return -1;
+}
+
+/* preset: 0 = Low-end, 1 = Balanced, 2 = High */
+void launcher_model_apply_video_preset(LauncherModel* m, int preset) {
+    int r = -1, res = -1;
+    if (!m) return;
+    switch (preset) {
+    case 0:  /* Low-end: CPU renderer, native resolution */
+        r = lm_find_renderer(m, "Software");
+        res = lm_find_resolution(m, "Native");
+        break;
+    case 2:  /* High */
+        r = lm_find_renderer(m, "OpenGL");
+        res = lm_find_resolution(m, "1080");
+        break;
+    default: /* Balanced: OpenGL, auto-scaling resolution if offered */
+        r = lm_find_renderer(m, "OpenGL");
+        res = lm_find_resolution(m, "Auto");
+        if (res < 0) res = lm_find_resolution(m, "Native");
+        break;
+    }
+    if (r >= 0 && launcher_model_renderer_offered(m))
+        launcher_model_set_renderer(m, r);
+    if (res >= 0 && launcher_model_internal_resolution_offered(m))
+        launcher_model_set_internal_resolution(m, res);
+}

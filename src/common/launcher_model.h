@@ -958,6 +958,7 @@ const char* launcher_model_internal_resolution_label_at(const LauncherModel* m, 
 int         launcher_model_internal_resolution_index(const LauncherModel* m);
 const char* launcher_model_internal_resolution_label(const LauncherModel* m);
 void        launcher_model_set_internal_resolution(LauncherModel* m, int i);
+void        launcher_model_apply_video_preset(LauncherModel* m, int preset); /* 0 Low-end, 1 Balanced, 2 High */
 const char* launcher_model_internal_resolution_note(const LauncherModel* m);
 /* Seed/validate Settings.internal_resolution against the vocabulary: a value
  * the host does not list (including unset) selects the first entry.

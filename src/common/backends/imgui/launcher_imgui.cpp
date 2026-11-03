@@ -4235,6 +4235,20 @@ void draw_display_controls(LauncherModel* m, const LauncherTheme& th) {
     // loads, Fullscreen.
     // Labels left, controls right (row_label_right), same as the legacy card.
     const float cb = ImGui::GetFrameHeight();   // a checkbox is square
+
+    // Quick presets: renderer + internal resolution in one click.
+    {
+        static const char* kPresetNames[] = {"Low-end", "Balanced", "High"};
+        ImGui::TextColored(col(th.text_muted), "%s", ui_text("Quick preset"));
+        for (int i = 0; i < 3; ++i) {
+            if (i) ImGui::SameLine();
+            ImGui::PushID(i);
+            if (ImGui::Button(ui_text(kPresetNames[i]), ImVec2(px(110), px(30))))
+                launcher_model_apply_video_preset(m, i);
+            ImGui::PopID();
+        }
+        ImGui::Spacing();
+    }
     if (m->has_window_size) {
         const float ww = settings_cycle_w(m, "Window size", th,
             launcher_model_cycle_window_size, launcher_model_window_size_label);
