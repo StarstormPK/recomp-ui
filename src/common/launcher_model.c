@@ -4885,21 +4885,30 @@ const char* launcher_model_relay_error_text(const char* err, bool ice_mode) {
     }
     return NULL;
 }
+/* ---- Quick video presets (Low-end / Balanced / High) -------------------- */
+static int lm_ci_has(const char* hay, const char* needle) {
+    size_t n = strlen(needle);
+    if (!hay) return 0;
+    for (; *hay; ++hay) {
+        size_t k = 0;
+        while (k < n && hay[k] &&
+               tolower((unsigned char)hay[k]) == tolower((unsigned char)needle[k])) ++k;
+        if (k == n) return 1;
+    }
+    return 0;
+}
+
 static int lm_find_renderer(LauncherModel* m, const char* needle) {
     const int n = launcher_model_renderer_count(m);
-    for (int i = 0; i < n; ++i) {
-        const char* l = launcher_model_renderer_label_at(m, i);
-        if (l && strstr(l, needle)) return i;
-    }
+    for (int i = 0; i < n; ++i)
+        if (lm_ci_has(launcher_model_renderer_label_at(m, i), needle)) return i;
     return -1;
 }
 
 static int lm_find_resolution(LauncherModel* m, const char* needle) {
     const int n = launcher_model_internal_resolution_count(m);
-    for (int i = 0; i < n; ++i) {
-        const char* l = launcher_model_internal_resolution_label_at(m, i);
-        if (l && strstr(l, needle)) return i;
-    }
+    for (int i = 0; i < n; ++i)
+        if (lm_ci_has(launcher_model_internal_resolution_label_at(m, i), needle)) return i;
     return -1;
 }
 
@@ -4908,17 +4917,19 @@ void launcher_model_apply_video_preset(LauncherModel* m, int preset) {
     int r = -1, res = -1;
     if (!m) return;
     switch (preset) {
-    case 0:  /* Low-end: CPU renderer, native resolution */
-        r = lm_find_renderer(m, "Software");
+    case 0:  /* Low-end: CPU renderer, lowest resolution */
+        r   = lm_find_renderer(m, "Software");
         res = lm_find_resolution(m, "Native");
+        if (res < 0) res = 0;                 /* entry 0 = host default/lowest */
         break;
     case 2:  /* High */
-        r = lm_find_renderer(m, "OpenGL");
+        r   = lm_find_renderer(m, "OpenGL");
         res = lm_find_resolution(m, "1080");
         break;
-    default: /* Balanced: OpenGL, auto-scaling resolution if offered */
-        r = lm_find_renderer(m, "OpenGL");
+    default: /* Balanced */
+        r   = lm_find_renderer(m, "OpenGL");
         res = lm_find_resolution(m, "Auto");
+        if (res < 0) res = lm_find_resolution(m, "720");
         if (res < 0) res = lm_find_resolution(m, "Native");
         break;
     }
