@@ -4354,6 +4354,120 @@ void draw_display_controls(LauncherModel* m, const LauncherTheme& th) {
         }
     }
 
+    // ---- Graphics (moved from the Mods view) -------------------------------
+    // Image Filtering and CRT Filter are built-in mods. This draws their
+    // controls with the same provider calls the Mods view makes, so the two
+    // views always agree. Changes apply when the game starts.
+    {
+        const auto* gm = m ? m->mods : nullptr;
+        if (gm && gm->feature_count && gm->feature_get &&
+            gm->feature_option_get && gm->feature_choice_get &&
+            gm->feature_enable && gm->feature_set_option) {
+            static const char* const kGfx[][2] = {
+                {"psx.enhancement.image-filtering", "image-filtering"},
+                {"psx.enhancement.crt-filter",      "crt-filter"},
+            };
+            bool any = false;
+            const int gcount = gm->feature_count(gm->ctx);
+            for (const auto& want : kGfx) {
+                RecompLauncherCModFeature gf{};
+                bool found = false;
+                for (int fi = 0; fi < gcount; ++fi) {
+                    if (gm->feature_get(gm->ctx, fi, &gf) &&
+                        std::strcmp(gf.package_id, want[0]) == 0 &&
+                        std::strcmp(gf.id, want[1]) == 0) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) continue;
+                if (!any) {
+                    ImGui::Spacing();
+                    ImGui::TextColored(col(th.accent), "%s", ui_text("Graphics"));
+                    ImGui::Separator();
+                    any = true;
+                }
+                ImGui::PushID(gf.package_id);
+                ImGui::PushID(gf.id);
+                bool on = gf.enabled != 0;
+                if (ImGui::Checkbox(gf.name, &on))
+                    gm->feature_enable(gm->ctx, gf.package_id, gf.id, on ? 1 : 0);
+                if (gf.description[0] &&
+                    ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+                    ImGui::SetTooltip("%s", gf.description);
+                if (on) {
+                    for (int oi = 0; oi < gf.option_count; ++oi) {
+                        RecompLauncherCModOption go{};
+                        if (!gm->feature_option_get(gm->ctx, gf.package_id,
+                                                    gf.id, oi, &go))
+                            continue;
+                        if (go.type != RECOMP_MOD_OPTION_CHOICE &&
+                            go.type != RECOMP_MOD_OPTION_INTEGER)
+                            continue;
+                        ImGui::PushID(go.id);
+                        if (go.disabled) ImGui::BeginDisabled();
+                        const float cw = px(220);
+                        row_label_right(go.label, th, cw);
+                        ImGui::SetNextItemWidth(cw);
+                        char next[RECOMP_LAUNCHER_MOD_VALUE_MAX] = {0};
+                        bool changed = false;
+                        if (go.type == RECOMP_MOD_OPTION_CHOICE) {
+                            const char* cur = go.value;
+                            RecompLauncherCModChoice ch{};
+                            for (int ci = 0; ci < go.choice_count; ++ci) {
+                                if (gm->feature_choice_get(gm->ctx, gf.package_id,
+                                        gf.id, go.id, ci, &ch) &&
+                                    std::strcmp(ch.value, go.value) == 0) {
+                                    cur = ch.label;
+                                    break;
+                                }
+                            }
+                            if (ImGui::BeginCombo("##opt", cur)) {
+                                for (int ci = 0; ci < go.choice_count; ++ci) {
+                                    if (!gm->feature_choice_get(gm->ctx,
+                                            gf.package_id, gf.id, go.id, ci, &ch))
+                                        continue;
+                                    const bool sel =
+                                        std::strcmp(ch.value, go.value) == 0;
+                                    if (ImGui::Selectable(ch.label, sel)) {
+                                        std::snprintf(next, sizeof(next), "%s",
+                                                      ch.value);
+                                        changed = true;
+                                    }
+                                    if (sel) ImGui::SetItemDefaultFocus();
+                                }
+                                ImGui::EndCombo();
+                            }
+                        } else {
+                            int v = (int)std::strtol(go.value, nullptr, 10);
+                            if (ImGui::SliderInt("##opt", &v, (int)go.min_value,
+                                                 (int)go.max_value)) {
+                                std::snprintf(next, sizeof(next), "%d", v);
+                                changed = true;
+                            }
+                        }
+                        if (go.description[0] &&
+                            ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+                            ImGui::SetTooltip("%s", go.description);
+                        if (go.disabled) ImGui::EndDisabled();
+                        if (changed)
+                            gm->feature_set_option(gm->ctx, gf.package_id, gf.id,
+                                                   go.id, next);
+                        ImGui::PopID();
+                    }
+                }
+                ImGui::PopID();
+                ImGui::PopID();
+            }
+            if (any) {
+                ImGui::TextColored(col(th.text_muted), "%s",
+                                   ui_text("Applies when the game starts."));
+                ImGui::Separator();
+                ImGui::Spacing();
+            }
+        }
+    }
+
     // Universal fullscreen row (every console — no longer gated on the
     // vestigial has_fullscreen_toggle). A tri-state dropdown, so Exclusive is
     // both reachable and visible without pressing through the other two.
