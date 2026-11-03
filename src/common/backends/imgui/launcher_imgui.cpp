@@ -4238,8 +4238,8 @@ void draw_display_controls(LauncherModel* m, const LauncherTheme& th) {
 
     // Quick presets: renderer + internal resolution in one click.
     {
-        static const char* kPresetNames[] = {"Low-end", "Balanced", "High"};
-        ImGui::TextColored(col(th.text_muted), "%s", ui_text("Quick preset"));
+        static const char* kPresetNames[] = {"Low-end", "Mid", "High"};
+        ImGui::TextColored(col(th.text_muted), "%s", ui_text("Graphics preset"));
         for (int i = 0; i < 3; ++i) {
             if (i) ImGui::SameLine();
             ImGui::PushID(i);
