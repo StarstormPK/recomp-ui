@@ -33,7 +33,7 @@
 static const int kFreqTable[] = { 32040, 32000, 44100, 48000 };
 static const int kFreqCount   = (int)(sizeof(kFreqTable) / sizeof(kFreqTable[0]));
 
-static const int kWindowWidths[]    = { 960, 1280, 1600, 1920 };
+static const int kWindowWidths[]    = { 960, 1024, 1152, 1280, 1366, 1440, 1600, 1920 };
 static const int kWindowWidthCount  = (int)(sizeof(kWindowWidths) / sizeof(kWindowWidths[0]));
 static const int kInterpFpsTable[]  = { 0, 90, 120, 144, 165, 240 };
 static const int kInterpFpsCount    = (int)(sizeof(kInterpFpsTable) / sizeof(kInterpFpsTable[0]));

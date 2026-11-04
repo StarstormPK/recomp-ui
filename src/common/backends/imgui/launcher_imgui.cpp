@@ -4364,10 +4364,20 @@ void draw_display_controls(LauncherModel* m, const LauncherTheme& th) {
             gm->feature_option_get && gm->feature_choice_get &&
             gm->feature_enable && gm->feature_set_option) {
             static const char* const kGfx[][2] = {
+                {"psx.enhancement.internal-resolution", "internal-resolution"},
                 {"psx.enhancement.image-filtering", "image-filtering"},
                 {"psx.enhancement.crt-filter",      "crt-filter"},
             };
             bool any = false;
+            // Resolution list shown to players: Auto, 1x-4x, 720p, 1080p.
+            auto gfx_choice_allowed = [](const char* oid, const char* val) {
+                if (std::strcmp(oid, "resolution") != 0) return true;
+                static const char* const ok[] = {"auto", "1x", "2x", "3x",
+                                                 "4x", "720p", "1080p"};
+                for (const char* o : ok)
+                    if (std::strcmp(val, o) == 0) return true;
+                return false;
+            };
             const int gcount = gm->feature_count(gm->ctx);
             for (const auto& want : kGfx) {
                 RecompLauncherCModFeature gf{};
@@ -4426,6 +4436,8 @@ void draw_display_controls(LauncherModel* m, const LauncherTheme& th) {
                                 for (int ci = 0; ci < go.choice_count; ++ci) {
                                     if (!gm->feature_choice_get(gm->ctx,
                                             gf.package_id, gf.id, go.id, ci, &ch))
+                                        continue;
+                                    if (!gfx_choice_allowed(go.id, ch.value))
                                         continue;
                                     const bool sel =
                                         std::strcmp(ch.value, go.value) == 0;
